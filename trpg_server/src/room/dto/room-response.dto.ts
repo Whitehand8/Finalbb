@@ -1,0 +1,80 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { RoomParticipantDto } from './room-participant.dto';
+import { Room } from '../entities/room.entity';
+import { TrpgSystem } from '@/common/enums/trpg-system.enum';
+
+export class RoomResponseDto {
+  @ApiProperty({ description: '방 ID' })
+  id: string;
+
+  @ApiProperty({ description: '선택된 TRPG 시스템' })
+  system: TrpgSystem;
+
+  @ApiProperty({ description: '방 이름' })
+  name: string;
+
+  @ApiProperty({ description: '최대 참여자 수', default: 2 })
+  maxParticipants: number;
+
+  @ApiProperty({ description: '현재 참여자 수' })
+  currentParticipants: number;
+
+  @ApiProperty({ description: '생성 시간' })
+  createdAt: Date;
+
+  @ApiProperty({ description: '수정 시간' })
+  updatedAt: Date;
+
+  @ApiProperty({ description: '삭제 여부' })
+  isDeleted: boolean;
+
+  @ApiProperty({
+    description: '참여자 목록',
+    type: [RoomParticipantDto],
+  })
+  participants: RoomParticipantDto[];
+
+  @ApiProperty({ description: '방장 사용자 ID', nullable: true })
+  creatorId: number | null;
+
+  @ApiProperty({ description: '방장 닉네임' })
+  creatorNickname: string;
+
+  @ApiProperty({ description: '채팅방 ID', nullable: true })
+  chat_room_id: number | null;
+
+  static fromEntity(room: Room): RoomResponseDto {
+    const participantsData =
+      room.participants
+        ?.filter((p) => p.leftAt === null)
+        .map((p) => {
+          // console.log(`[DTO] User ${p.user.id} loaded role:`, p.role);
+          return {
+            userId: p.user.id,
+            name: p.user.name,
+            nickname: p.user.nickname,
+            role: p.role,
+          };
+        }) || [];
+
+    return {
+      id: room.id,
+      system: room.system,
+      name: room.name,
+      maxParticipants: room.maxParticipants,
+      currentParticipants: participantsData.length,
+      createdAt: room.createdAt,
+      updatedAt: room.updatedAt,
+      isDeleted: !!room.deletedAt,
+      participants: participantsData.map((p) => ({
+        id: p.userId,
+        name: p.name ?? '탈퇴한 사용자',
+        nickname: p.nickname ?? '익명',
+        role: p.role,
+      })),
+      creatorId: room.creator?.id,
+      creatorNickname: room.creator.nickname,
+      chat_room_id: room.chat_room_id,
+    };
+  }
+}
