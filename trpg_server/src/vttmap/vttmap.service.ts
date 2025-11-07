@@ -67,6 +67,11 @@ export class VttMapService {
       gridType: dto.gridType,
       gridSize: dto.gridSize,
       showGrid: dto.showGrid,
+      // --- [신규] DTO에서 새 필드 값 받아와서 저장 ---
+      imageScale: dto.imageScale,
+      imageX: dto.imageX,
+      imageY: dto.imageY,
+      // ----------------------------------------
       roomId,
       room,
     });
@@ -115,10 +120,13 @@ export class VttMapService {
     const updateFields = Object.fromEntries(
       Object.entries(dto).filter(([, value]) => value !== undefined),
     );
+    // 이 assign 덕분에 dto에 imageScale 등이 포함되어 있으면 자동으로 vttMap 객체에 반영됨
     Object.assign(vttMap, updateFields);
 
     const updated = await this.vttMapRepository.save(vttMap);
     console.log('[Event] Emitting map.updated for', vttMapId);
+
+    // [수정됨] map.updated 이벤트 페이로드에 새 필드 추가
     this.eventEmitter.emit(
       'map.updated',
       new MapUpdatedEvent(vttMapId, {
@@ -128,6 +136,11 @@ export class VttMapService {
         gridType: updated.gridType,
         gridSize: updated.gridSize,
         showGrid: updated.showGrid,
+        // --- [신규] 업데이트된 필드를 이벤트 페이로드에 추가 ---
+        imageScale: updated.imageScale,
+        imageX: updated.imageX,
+        imageY: updated.imageY,
+        // ----------------------------------------------
         updatedAt: updated.updatedAt,
       }),
     );

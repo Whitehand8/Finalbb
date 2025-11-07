@@ -1,6 +1,15 @@
 import { GridType } from '@/common/enums/grid-type.enum';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+// [수정됨] IsNumber 추가
+import {
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { VTTMAP_ERRORS } from '../constants/vttmap.constants';
 import { Transform } from 'class-transformer';
 
@@ -57,4 +66,34 @@ export class CreateVttMapDto {
   })
   @IsOptional()
   showGrid?: boolean = true;
+
+  // --- [신규] 배경 이미지 변형(Transform) 필드 ---
+
+  @ApiProperty({
+    description: '배경 이미지 스케일',
+    default: 1.0,
+    required: false,
+  })
+  @IsNumber()
+  @Min(0.1, { message: '이미지 스케일은 0.1보다 커야 합니다.' })
+  @IsOptional()
+  imageScale?: number = 1.0;
+
+  @ApiProperty({
+    description: '배경 이미지 X 오프셋',
+    default: 0,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  imageX?: number = 0;
+
+  @ApiProperty({
+    description: '배경 이미지 Y 오프셋',
+    default: 0,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  imageY?: number = 0;
 }

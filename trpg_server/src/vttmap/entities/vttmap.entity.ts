@@ -38,6 +38,22 @@ export class VttMap {
   @Column({ type: 'boolean', default: true })
   showGrid: boolean;
 
+  // --- [신규] 배경 이미지 변형(Transform) 필드 ---
+
+  @ApiProperty({ description: '배경 이미지 스케일', default: 1.0 })
+  @Column({ type: 'float', default: 1.0 })
+  imageScale: number;
+
+  @ApiProperty({ description: '배경 이미지 X 오프셋', default: 0 })
+  @Column({ type: 'float', default: 0 })
+  imageX: number;
+
+  @ApiProperty({ description: '배경 이미지 Y 오프셋', default: 0 })
+  @Column({ type: 'float', default: 0 })
+  imageY: number;
+
+  // --- [여기까지 신규 필드] ---
+
   @ManyToOne(() => Room, (room) => room.vttmaps)
   @JoinColumn({ name: 'roomId' })
   room: Room;

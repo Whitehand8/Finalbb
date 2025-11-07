@@ -61,21 +61,22 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // connectedMaps에서 사용자 제거
     for (const [mapId, userSet] of this.connectedMaps.entries()) {
-      userSet.delete(user.id);
-      if (userSet.size === 0) {
+      if (userSet.delete(user.id) && userSet.size === 0) {
         this.connectedMaps.delete(mapId);
       }
     }
 
     // connectedRooms에서 사용자 제거
     for (const [roomId, userSet] of this.connectedRooms.entries()) {
-      userSet.delete(user.id);
-      if (userSet.size === 0) {
+      if (userSet.delete(user.id) && userSet.size === 0) {
         this.connectedRooms.delete(roomId);
       }
     }
   }
 
+  // --- [수정 불필요] ---
+  // 이 함수는 프론트엔드의 connect()와 완벽하게 호환됩니다.
+  // mapId 없이 roomId만 받고, 'joinedRoom'만 emit합니다.
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @MessageBody() data: { roomId: string },
@@ -128,6 +129,9 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('leftRoom', { roomId });
   }
 
+  // --- [수정됨] ---
+  // 프론트엔드 VttScene.fromJson이 필요로 하는
+  // 모든 필드를 전송하도록 'map' 페이로드 수정
   @SubscribeMessage('joinMap')
   async handleJoinMap(
     @MessageBody() data: { mapId: string },
@@ -139,8 +143,10 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`[DEBUG] joinMap called: mapId=${mapId}, userId=${userId}`);
     try {
       // 맵 정보 조회 + 권한 검증 (roomId 포함)
+      // 'map' 변수는 VttMap Entity의 모든 속성을 포함합니다.
       const map = await this.vttService.getVttMapForUser(mapId, userId);
       const isJoinedRoom = this.connectedRooms.get(map.roomId)?.has(userId);
+      
       console.log(
         `[DEBUG] isJoinedRoom check: roomId=${map.roomId}, result=${isJoinedRoom}`,
       );
@@ -159,25 +165,24 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.connectedMaps.get(mapId)!.add(userId);
 
       // Socket.IO 방 참여
-      client.join(`room-${map.roomId}`); // 맵 생성/삭제 수신용
       client.join(`map-${mapId}`); // 토큰/맵 설정 수신용
 
       // 전체 초기 상태: 맵 + 모든 토큰
       const tokens = await this.vttService.getTokensByMap(mapId, userId);
 
+      // --- 🚨 [수정된 페이로드] ---
+      // 프론트엔드 VttScene.fromJson이 모든 필드를 받을 수 있도록
+      // 'map' 객체 전체를 전달하고, 호환성을 위해 'backgroundUrl'을 추가합니다.
+      const frontendMapPayload = {
+        ...map, // VttMap 엔티티의 모든 속성 (localWidth, localHeight, properties 등) 복사
+        backgroundUrl: map.imageUrl ?? null, // 'imageUrl'을 'backgroundUrl'로 복사
+      };
+
       client.emit('joinedMap', {
-        mapId,
-        map: {
-          id: map.id,
-          name: map.name ?? undefined,
-          imageUrl: map.imageUrl ?? undefined,
-          gridType: map.gridType,
-          gridSize: map.gridSize,
-          showGrid: map.showGrid,
-          updatedAt: map.updatedAt,
-        },
-        tokens, // 전체 토큰 목록 포함
+        map: frontendMapPayload, // 수정된 'map' 객체 전송
+        tokens,                  // 전체 토큰 목록 포함
       });
+      // --- 🚨 [수정 끝] ---
 
       console.log(
         `✅ User ${userId} joined map ${mapId} with ${tokens.length} tokens`,
@@ -195,8 +200,10 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @OnEvent('map.updated')
   handleMapUpdated(event: MapUpdatedEvent) {
+    // vttmap.service.ts에서 페이로드에 새 필드를 추가했으므로,
+    // ...event.payload를 통해 자동으로 전파됨 (수정 필요 없음)
     this.server.to(`map-${event.mapId}`).emit('mapUpdated', {
-      mapId: event.mapId,
+      id: event.mapId, // [수정] VttScene.fromJson을 위해 id를 mapId 대신 사용
       ...event.payload,
     });
   }
@@ -298,7 +305,8 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const { mapId, updates } = raw as UpdateMapMessage;
 
-      // 3. 서비스 호출
+      // 3. 서비스 호출 (vttmap.service.ts의 updateVttMap)
+      // 이 서비스가 'map.updated' 이벤트를 발생시킴
       await this.vttService.updateMap(mapId, updates, userId);
     } catch (error) {
       console.error('[GW] updateMap error:', error);

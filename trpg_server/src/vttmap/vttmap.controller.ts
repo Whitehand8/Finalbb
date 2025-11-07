@@ -1,3 +1,4 @@
+// src/vttmap/vttmap.controller.ts
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import {
   Controller,
@@ -13,6 +14,7 @@ import {
   HttpStatus,
   Query,
   Delete,
+  InternalServerErrorException, // [신규] 500 오류를 명시적으로 처리하기 위해 import
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -136,6 +138,8 @@ export class VttMapController {
     return VttMapResponseDto.fromEntity(VTTMAP_MESSAGES.RETRIEVED, vttMap);
   }
 
+  // --- 🚨 [수정됨] ---
+  // 500 오류 방지를 위해 try-catch 블록 추가
   @Get()
   @ApiOperation({
     summary: '방 내 VTT 맵 목록 조회',
@@ -143,7 +147,7 @@ export class VttMapController {
   })
   @ApiQuery({ name: 'roomId', required: true, type: 'string', format: 'uuid' })
   @ApiOkResponse({
-    description: '맵 목록 조회 성공',
+    description: '맵 목록 조회 성공 (맵이 없으면 빈 배열 반환)',
     type: [VttMapDto],
   })
   @ApiUnauthorizedResponse({ description: '인증되지 않음' })
@@ -153,12 +157,26 @@ export class VttMapController {
     @Query('roomId', ParseUUIDPipe) roomId: string,
     @Req() req: RequestWithUser,
   ) {
-    const vttMaps = await this.vttMapService.getVttMapsByRoomId(
-      roomId,
-      req.user.id,
-    );
-    return vttMaps.map(VttMapDto.fromEntity);
+    try {
+      const vttMaps = await this.vttMapService.getVttMapsByRoomId(
+        roomId,
+        req.user.id,
+      );
+      // vttMapService가 맵이 없을 때 빈 배열을 반환하면,
+      // map(VttMapDto.fromEntity)도 빈 배열을 반환합니다.
+      return vttMaps.map(VttMapDto.fromEntity);
+    } catch (error) {
+      // vttMapService.getVttMapsByRoomId에서 403, 404 오류가 아닌
+      // 예기치 못한 오류(DB 오류 등)가 발생했을 때 500 오류를 반환합니다.
+      console.error(`[ERROR] getVttMapsByRoom: ${error.message}`);
+      // 403, 404 오류는 vttMapService 내부의 Guard 로직에서
+      // 자동으로 처리되어야 합니다.
+      throw new InternalServerErrorException(
+        '맵 목록을 가져오는 중 오류가 발생했습니다.',
+      );
+    }
   }
+  // --- 🚨 [수정 끝] ---
 
   @Patch(':mapId')
   @ApiOperation({

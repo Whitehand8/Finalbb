@@ -77,7 +77,7 @@ export class RoomService {
     await this.roomParticipantService.addParticipant(
       savedRoom, // 저장된 TRPG 방 엔티티
       user,      // 방장 유저 객체
-      ParticipantRole.PLAYER, // 방장의 기본 역할 (필요시 GM 등으로 수정)
+      ParticipantRole.GM, // 방장의 기본 역할 (필요시 GM 등으로 수정)
     );
 
     const updatedRoom = await this.roomRepository.findOne({
