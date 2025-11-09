@@ -38,6 +38,19 @@ export class VttMap {
   @Column({ type: 'boolean', default: true })
   showGrid: boolean;
 
+  // --- [수정] 맵 크기 필드 추가 ---
+  // 이 필드들은 프론트엔드의 VttScene.fromJson(j['width'], j['height'])에서 사용됩니다.
+
+  @ApiProperty({ description: '맵 너비', default: 1000 })
+  @Column({ type: 'int', nullable: false, default: 1000 })
+  width: number;
+
+  @ApiProperty({ description: '맵 높이', default: 800 })
+  @Column({ type: 'int', nullable: false, default: 800 })
+  height: number;
+  
+  // --- [여기까지 수정된 부분] ---
+
   // --- [신규] 배경 이미지 변형(Transform) 필드 ---
 
   @ApiProperty({ description: '배경 이미지 스케일', default: 1.0 })

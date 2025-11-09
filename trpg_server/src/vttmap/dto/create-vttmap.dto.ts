@@ -96,4 +96,16 @@ export class CreateVttMapDto {
   @IsNumber()
   @IsOptional()
   imageY?: number = 0;
+
+  @ApiProperty({ description: '맵 너비', default: 1000, required: false })
+  @IsOptional() // 이 값은 필수가 아님 (엔티티의 default를 따름)
+  @IsInt()
+  @Min(100) // 최소 너비 (선택 사항)
+  width?: number; // '?'를 붙여 선택적 속성으로 지정
+
+  @ApiProperty({ description: '맵 높이', default: 800, required: false })
+  @IsOptional()
+  @IsInt()
+  @Min(100) // 최소 높이 (선택 사항)
+  height?: number; // '?'를 붙여 선택적 속성으로 지정
 }
