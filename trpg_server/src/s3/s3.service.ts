@@ -81,13 +81,13 @@ export class S3Service {
   }
 
   // // 테스트를 위한 업로드 함수
-  // async uploadObject(key: string, body: Buffer | string, contentType?: string) {
-  //   const command = new PutObjectCommand({
-  //     Bucket: this.bucketName,
-  //     Key: key,
-  //     Body: body,
-  //     ContentType: contentType,
-  //   });
-  //   return this.s3Client.send(command);
-  // }
+  async uploadObject(key: string, body: Buffer | string, contentType?: string) {
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    });
+    return this.s3Client.send(command);
+ }
 }
