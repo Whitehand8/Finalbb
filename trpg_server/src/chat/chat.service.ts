@@ -1,8 +1,6 @@
 // src/chat/chat.service.ts
 
 import {
-  Inject,
-  forwardRef,
   Injectable,
   NotFoundException,
   ForbiddenException,
@@ -21,7 +19,6 @@ import { MessageResponseDto } from './dto/message-response.dto';
 import { UsersService } from '@/users/users.service';
 import { Transactional } from 'typeorm-transactional';
 import { CHAT_ERRORS } from './constant/chat.constant';
-import { AuthService } from '@/auth/auth.service';
 
 @Injectable()
 export class ChatService {
@@ -32,12 +29,7 @@ export class ChatService {
     private chatParticipantRepository: Repository<ChatParticipant>,
     @InjectRepository(ChatMessage)
     private chatMessageRepository: Repository<ChatMessage>,
-    
-    @Inject(forwardRef(() => UsersService))
-    private readonly usersService: UsersService,
-
-    @Inject(forwardRef(() => AuthService))
-    private readonly authService: AuthService,
+    private usersService: UsersService,
   ) {}
 
   // 1. 채팅방 생성
