@@ -100,6 +100,8 @@ export class RoomParticipantService {
         user: true,
       },
       select: {
+        id: true,
+        role: true,
         user: {
           id: true,
           nickname: true,
@@ -109,7 +111,8 @@ export class RoomParticipantService {
     });
 
     return participants.map((p) => ({
-      id: p.user.id,
+      id: p.id,
+      userId: p.user.id,
       name: p.user.name ?? '탈퇴한 사용자',
       nickname: p.user.nickname,
       role: p.role,

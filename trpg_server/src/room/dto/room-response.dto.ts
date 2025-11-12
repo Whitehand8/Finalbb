@@ -68,6 +68,7 @@ export class RoomResponseDto {
       isDeleted: !!room.deletedAt,
       participants: participantsData.map((p) => ({
         id: p.userId,
+        userId: p.userId,
         name: p.name ?? '탈퇴한 사용자',
         nickname: p.nickname ?? '익명',
         role: p.role,
