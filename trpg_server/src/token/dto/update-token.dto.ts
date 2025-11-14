@@ -27,6 +27,22 @@ export class UpdateTokenDto {
   y?: number;
 
   @ApiPropertyOptional({
+    example: 150,
+    description: '새로운 너비 (변경 시에만 포함)',
+  })
+  @IsNumber()
+  @IsOptional()
+  width?: number;
+
+  @ApiPropertyOptional({
+    example: 150,
+    description: '새로운 높이 (변경 시에만 포함)',
+  })
+  @IsNumber()
+  @IsOptional()
+  height?: number;
+
+  @ApiPropertyOptional({
     example: 1.5,
     description: '새로운 스케일 값 (변경 시에만 포함)',
   })

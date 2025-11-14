@@ -74,7 +74,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       // ✅ 1. 권한 체크 (기존)
-      //await this.chatService.checkUserCanAccessRoom(userId, roomId);
+      await this.chatService.checkUserCanAccessRoom(userId, roomId);
 
       // ✅ 2. NEW: 방에 접속 중인 사용자 목록에 추가
       if (!this.connectedUsers.has(roomId)) {
