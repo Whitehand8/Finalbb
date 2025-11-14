@@ -1,3 +1,4 @@
+/*
 import {
   Controller,
   Post,
@@ -35,7 +36,7 @@ export class S3Controller {
   ) {
     // ...
   }
-  */
+  
 
   @Post('presigned-url')
   @UseGuards(JwtAuthGuard) // 🚨 [필수] 이 보안 가드를 반드시 유지합니다.
@@ -75,3 +76,4 @@ export class S3Controller {
   //   return filename.split('.').pop()?.toLowerCase() || 'bin';
   // }
 }
+*/
