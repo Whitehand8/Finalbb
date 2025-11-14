@@ -16,6 +16,7 @@ import { VttmapModule } from './vttmap/vttmap.module';
 import { TokenModule } from './token/token.module';
 import { VttModule } from './vtt/vtt.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { MapAssetModule } from './map-asset/map-asset.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     TokenModule,
     VttModule,
     EventEmitterModule.forRoot(),
+    MapAssetModule,
   ],
   controllers: [AppController],
   providers: [AppService],

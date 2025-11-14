@@ -1,6 +1,7 @@
 import { GridType } from '@/common/enums/grid-type.enum';
 import { Room } from '@/room/entities/room.entity';
 import { Token } from '@/token/entities/token.entity';
+import { MapAsset } from '@/map-asset/entities/map-asset.entity'; // [신규] MapAsset import
 import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
@@ -48,7 +49,7 @@ export class VttMap {
   @ApiProperty({ description: '맵 높이', default: 800 })
   @Column({ type: 'int', nullable: false, default: 800 })
   height: number;
-  
+
   // --- [여기까지 수정된 부분] ---
 
   // --- [신규] 배경 이미지 변형(Transform) 필드 ---
@@ -76,6 +77,12 @@ export class VttMap {
 
   @OneToMany(() => Token, (token) => token.map)
   tokens: Token[];
+
+  // --- [신규] MapAsset (1:N) 관계 추가 ---
+  // map-asset.entity.ts의 @ManyToOne과 연결됩니다.
+  @OneToMany(() => MapAsset, (asset) => asset.map)
+  assets: MapAsset[];
+  // --- [신규 끝] ---
 
   @ApiProperty({ description: '생성 시간' })
   @CreateDateColumn({ name: 'created_at' })

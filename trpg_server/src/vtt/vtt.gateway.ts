@@ -1,4 +1,3 @@
-// src/vtt/vtt.gateway.ts
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -8,6 +7,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { BadRequestException } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { VttService } from './vtt.service';
 import { MoveTokenDto } from '@/token/dto/move-token.dto';
@@ -25,6 +25,14 @@ import { TokenUpdatedEvent } from '@/token/events/token-updated.event';
 import { TokenDeletedEvent } from '@/token/events/token-deleted.event';
 import { MapCreatedEvent } from './event/map-created.event';
 import { MapDeletedEvent } from './event/map-deleted.event';
+
+// --- [신규] MapAsset 모듈 import ---
+import { MapAssetService } from '@/map-asset/map-asset.service';
+import { MapAssetCreatedEvent } from '@/map-asset/events/map-asset-created.event';
+import { MapAssetUpdatedEvent } from '@/map-asset/events/map-asset-updated.event';
+import { MapAssetDeletedEvent } from '@/map-asset/events/map-asset-deleted.event';
+import { MAP_ASSET_EVENTS } from '@/map-asset/constants/events';
+// --- [신규 끝] ---
 
 @WebSocketGateway(11123, {
   namespace: '/vtt',
@@ -44,6 +52,9 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly vttService: VttService,
     private readonly wsAuthMiddleware: WsAuthMiddleware,
+    // --- [신규] MapAssetService 주입 ---
+    private readonly mapAssetService: MapAssetService,
+    // --- [신규 끝] ---
   ) {}
 
   afterInit(server: Server) {
@@ -75,8 +86,7 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // --- [수정 불필요] ---
-  // 이 함수는 프론트엔드의 connect()와 완벽하게 호환됩니다.
-  // mapId 없이 roomId만 받고, 'joinedRoom'만 emit합니다.
+  // ... (handleJoinRoom, handleLeaveRoom은 기존과 동일) ...
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @MessageBody() data: { roomId: string },
@@ -146,7 +156,7 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 'map' 변수는 VttMap Entity의 모든 속성을 포함합니다.
       const map = await this.vttService.getVttMapForUser(mapId, userId);
       const isJoinedRoom = this.connectedRooms.get(map.roomId)?.has(userId);
-      
+
       console.log(
         `[DEBUG] isJoinedRoom check: roomId=${map.roomId}, result=${isJoinedRoom}`,
       );
@@ -170,6 +180,10 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 전체 초기 상태: 맵 + 모든 토큰
       const tokens = await this.vttService.getTokensByMap(mapId, userId);
 
+      // --- 🚨 [신규] MapAsset 목록 조회 ---
+      const mapAssets = await this.mapAssetService.findAllByMapId(mapId);
+      // --- 🚨 [신규 끝] ---
+
       // --- 🚨 [수정된 페이로드] ---
       // 프론트엔드 VttScene.fromJson이 모든 필드를 받을 수 있도록
       // 'map' 객체 전체를 전달하고, 호환성을 위해 'backgroundUrl'을 추가합니다.
@@ -180,12 +194,13 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.emit('joinedMap', {
         map: frontendMapPayload, // 수정된 'map' 객체 전송
-        tokens,                  // 전체 토큰 목록 포함
+        tokens, // 전체 토큰 목록 포함
+        mapAssets: mapAssets, // 🚨 [신규] 맵 에셋 목록 포함
       });
       // --- 🚨 [수정 끝] ---
 
       console.log(
-        `✅ User ${userId} joined map ${mapId} with ${tokens.length} tokens`,
+        `✅ User ${userId} joined map ${mapId} with ${tokens.length} tokens and ${mapAssets.length} assets`,
       );
     } catch (error) {
       console.error('[joinMap] Error:', error);
@@ -193,6 +208,7 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // ... (handleLeaveMap, handleMapCreated, handleMapUpdated, handleMapDeleted는 기존과 동일) ...
   @OnEvent('map.created')
   handleMapCreated(event: MapCreatedEvent) {
     this.server.to(`room-${event.roomId}`).emit('mapCreated', event.map);
@@ -268,6 +284,74 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // --- [신규] MapAsset Socket Handlers ---
+
+  @SubscribeMessage('update_map_asset')
+  async handleUpdateMapAsset(
+    @MessageBody() raw: any, // vtt_service.dart에서 보낸 payload
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      // 1. 수동 유효성 검사 (handleUpdateMap 패턴을 따름)
+      if (!raw || typeof raw.assetId !== 'string') {
+        throw new BadRequestException('Invalid assetId');
+      }
+      if (
+        typeof raw.x !== 'number' ||
+        typeof raw.y !== 'number' ||
+        typeof raw.width !== 'number' ||
+        typeof raw.height !== 'number'
+      ) {
+        throw new BadRequestException('Invalid asset transform data');
+      }
+
+      // 2. MapAssetService 호출 (vttService 아님)
+      // [참고] MapAsset은 권한 검증이 필요 없으므로(요구사항 3) 바로 update 호출
+      await this.mapAssetService.update(raw.assetId, {
+        x: raw.x,
+        y: raw.y,
+        width: raw.width,
+        height: raw.height,
+      });
+      // 3. 서비스가 'map_asset.updated' 이벤트를 발행하면
+      // 아래 handleMapAssetUpdated 리스너가 잡아 브로드캐스트합니다.
+    } catch (error) {
+      console.error('[GW] update_map_asset error:', error);
+      client.emit('error', {
+        message: error.message || '맵 에셋 업데이트 실패',
+      });
+    }
+  }
+
+  @SubscribeMessage('delete_map_asset')
+  async handleDeleteMapAsset(
+    @MessageBody() raw: any, // vtt_service.dart에서 보낸 payload
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      // 1. 수동 유효성 검사
+      if (!raw || typeof raw.assetId !== 'string') {
+        throw new BadRequestException('Invalid assetId');
+      }
+
+      // 2. MapAssetService 호출 (vttService 아님)
+      // [참고] MapAsset은 권한 검증이 필요 없으므로(요구사항 3) 바로 remove 호출
+      await this.mapAssetService.remove(raw.assetId);
+
+      // 3. 서비스가 'map_asset.deleted' 이벤트를 발행하면
+      // 아래 handleMapAssetDeleted 리스너가 잡아 브로드캐스트합니다.
+    } catch (error) {
+      console.error('[GW] delete_map_asset error:', error);
+      client.emit('error', {
+        message: error.message || '맵 에셋 삭제 실패',
+      });
+    }
+  }
+
+  // --- [신규 끝] ---
+
+
+  // --- [기존] Token Event Listeners ---
   @OnEvent('token.created')
   handleTokenCreated(event: TokenCreatedEvent) {
     console.log('[GW] Emitting token:created to room map-', event.mapId);
@@ -285,6 +369,38 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .to(`map-${event.mapId}`)
       .emit('token:deleted', { id: event.tokenId });
   }
+  // --- [기존 끝] ---
+
+
+  // --- [신규] MapAsset Event Listeners (Token 리스너 패턴을 따름) ---
+
+  @OnEvent(MAP_ASSET_EVENTS.CREATED)
+  handleMapAssetCreated(event: MapAssetCreatedEvent) {
+    // 프론트 vtt_socket_service.dart는 'map_asset_created'를 기다림
+    this.server
+      .to(`map-${event.mapAsset.mapId}`)
+      .emit('map_asset_created', event.mapAsset);
+  }
+
+  @OnEvent(MAP_ASSET_EVENTS.UPDATED)
+  handleMapAssetUpdated(event: MapAssetUpdatedEvent) {
+    // 프론트 vtt_socket_service.dart는 'map_asset_updated'를 기다림
+    this.server
+      .to(`map-${event.mapAsset.mapId}`)
+      .emit('map_asset_updated', event.mapAsset);
+  }
+
+  @OnEvent(MAP_ASSET_EVENTS.DELETED)
+  handleMapAssetDeleted(event: MapAssetDeletedEvent) {
+    // 프론트 vtt_socket_service.dart는 'map_asset_deleted'를 기다림
+    // TokenDeletedEvent와 동일하게 { id: string } 객체 전송
+    this.server
+      .to(`map-${event.mapId}`)
+      .emit('map_asset_deleted', { id: event.id });
+  }
+
+  // --- [신규 끝] ---
+
 
   @SubscribeMessage('updateMap')
   async handleUpdateMap(
