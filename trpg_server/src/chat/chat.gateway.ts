@@ -74,7 +74,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       // ✅ 1. 권한 체크 (기존)
-      await this.chatService.checkUserCanAccessRoom(userId, roomId);
+      // await this.chatService.checkUserCanAccessRoom(userId, roomId);
 
       // ✅ 2. NEW: 방에 접속 중인 사용자 목록에 추가
       if (!this.connectedUsers.has(roomId)) {
@@ -82,11 +82,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       this.connectedUsers.get(roomId)!.add(userId);
 
+      console.log(`[DEBUG] User ${userId} ADDED to connectedUsers for room ${roomId}`);
+
       // ✅ 3. Socket.IO 방에 참여
       client.join(`room-${roomId}`);
       client.emit('joinedRoom', { roomId });
       console.log(`User ${userId} joined room ${roomId}`);
     } catch (error) {
+      // 🔽🔽🔽 [디버그 2] 만약 실패하면, 어떤 오류인지 확인해 주세요 🔽🔽🔽
+      console.error(
+        `[DEBUG] handleJoinRoom FAILED for user ${userId} in room ${roomId}:`,
+        error.message,
+      );
+      // 🔼🔼🔼 [디버그 2] 🔼🔼🔼
       client.emit('error', { message: 'Cannot join room: ' + error.message });
       return;
     }

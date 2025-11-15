@@ -130,6 +130,8 @@ export class RoomService {
     const user = await this.usersService.getActiveUserById(userId);
     await this.roomParticipantService.addParticipant(room, user);
 
+    await this.chatService.inviteUser(room.creator.id, room.chat_room_id, userId);
+
     // 최신 상태의 방 반환
     const updatedRoom = await this.roomRepository.findOne({
       where: { id: roomId },
