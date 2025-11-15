@@ -286,7 +286,7 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // --- [신규] MapAsset Socket Handlers ---
 
-  @SubscribeMessage('update_map_asset')
+  @SubscribeMessage('updateMapAsset')
   async handleUpdateMapAsset(
     @MessageBody() raw: any, // vtt_service.dart에서 보낸 payload
     @ConnectedSocket() client: Socket,
@@ -323,7 +323,7 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('delete_map_asset')
+  @SubscribeMessage('deleteMapAsset')
   async handleDeleteMapAsset(
     @MessageBody() raw: any, // vtt_service.dart에서 보낸 payload
     @ConnectedSocket() client: Socket,

@@ -32,6 +32,16 @@ export class Token {
   @Column({ type: 'float', default: 0 })
   y: number;
 
+  // --- 🚨 [여기부터 수정] ---
+  @ApiProperty({ description: '토큰 너비', default: 50.0 })
+  @Column({ type: 'float', default: 50.0 })
+  width: number;
+
+  @ApiProperty({ description: '토큰 높이', default: 50.0 })
+  @Column({ type: 'float', default: 50.0 })
+  height: number;
+  // --- 🚨 [여기까지 수정] ---
+
   @Column({ type: 'float', default: 1.0 })
   scale: number;
 

@@ -21,6 +21,11 @@ export class TokenService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  /**
+   * 🚨 [수정됨] 🚨
+   * Token 엔티티를 프론트엔드로 보낼 DTO로 변환합니다.
+   * width와 height를 포함하도록 수정되었습니다.
+   */
   private toResponseDto(token: Token): TokenResponseDto {
     return {
       id: token.id,
@@ -28,16 +33,20 @@ export class TokenService {
       name: token.name,
       x: token.x,
       y: token.y,
-      scale: token.scale,
+      scale: token.scale, // (참고: 이 scale은 아마도 사용되지 않을 것입니다)
       imageUrl: token.imageUrl,
       characterSheetId: token.characterSheetId,
       npcId: token.npcId,
+      // --- 🚨 [추가된 부분] ---
+      width: token.width,
+      height: token.height,
+      // --- 🚨 [추가 끝] ---
     };
   }
 
   async createToken(
     mapId: string,
-    dto: CreateTokenDto,
+    dto: CreateTokenDto, // (참고: CreateTokenDto에도 width, height가 있어야 합니다)
     userId: number,
   ): Promise<TokenResponseDto> {
     this.validator.validateOwnershipRelation(dto);
@@ -48,6 +57,11 @@ export class TokenService {
       name: dto.name,
       x: dto.x,
       y: dto.y,
+      // --- 🚨 [수정된 부분] ---
+      // DTO에 값이 없으면 엔티티의 기본값(50)을 사용합니다.
+      width: dto.width ?? 50.0,
+      height: dto.height ?? 50.0,
+      // --- 🚨 [수정 끝] ---
       scale: dto.scale ?? 1.0,
       imageUrl: dto.imageUrl,
       characterSheetId: dto.characterSheetId,
@@ -77,8 +91,25 @@ export class TokenService {
       tokenId,
       userId,
     );
-    Object.assign(token, dto);
+
+    // --- 🚨 [수정됨] ---
+    // Object.assign(token, dto); // 👈 위험한 코드 제거
+    
+    // DTO에 명시적으로 포함된 값만 안전하게 업데이트합니다.
+    if (dto.name !== undefined) token.name = dto.name;
+    if (dto.x !== undefined) token.x = dto.x;
+    if (dto.y !== undefined) token.y = dto.y;
+    if (dto.width !== undefined) token.width = dto.width;
+    if (dto.height !== undefined) token.height = dto.height;
+    if (dto.scale !== undefined) token.scale = dto.scale;
+    if (dto.imageUrl !== undefined) token.imageUrl = dto.imageUrl;
+    // --- 🚨 [수정 끝] ---
+
     const updated = await this.tokenRepository.save(token);
+    
+    // 🚨 [수정됨] 
+    // toResponseDto가 이제 width/height를 포함하므로
+    // responseDto도 완전한 데이터를 가집니다.
     const responseDto = this.toResponseDto(updated);
 
     this.eventEmitter.emit(
@@ -97,6 +128,9 @@ export class TokenService {
     const tokens = await this.tokenRepository.find({ where: { mapId } });
     console.log('[DEBUG] getTokensByMap - raw tokens from DB:', tokens);
 
+    // 🚨 [수정됨] 
+    // toResponseDto가 width/height를 포함하므로
+    // responseDtos도 완전한 데이터를 가집니다.
     const responseDtos = tokens.map((t) => this.toResponseDto(t));
     console.log('[DEBUG] getTokensByMap - response DTOs:', responseDtos);
     return responseDtos;
@@ -124,6 +158,8 @@ export class TokenService {
     const tokens = await this.tokenRepository.find({
       where: { mapId },
     });
+    // 🚨 [수정됨]
+    // toResponseDto가 width/height를 포함합니다.
     return tokens.map((t) => this.toResponseDto(t));
   }
 }

@@ -14,6 +14,22 @@ export class CreateTokenDto {
   @IsNumber()
   y: number;
 
+  @ApiPropertyOptional({
+    example: 50,
+    description: '토큰 너비 (기본값: 50)',
+  })
+  @IsNumber()
+  @IsOptional()
+  width?: number;
+
+  @ApiPropertyOptional({
+    example: 50,
+    description: '토큰 높이 (기본값: 50)',
+  })
+  @IsNumber()
+  @IsOptional()
+  height?: number;
+
   @ApiPropertyOptional({ example: 1.2, description: '스케일 (기본값: 1.0)' })
   @IsNumber()
   @IsOptional()
