@@ -292,7 +292,7 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      // 1. 수동 유효성 검사 (handleUpdateMap 패턴을 따름)
+      // 1. 수동 유효성 검사 (handleUpdateMap 패턴을 따름) 
       if (!raw || typeof raw.assetId !== 'string') {
         throw new BadRequestException('Invalid assetId');
       }
