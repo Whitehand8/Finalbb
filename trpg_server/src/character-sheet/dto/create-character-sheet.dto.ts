@@ -1,5 +1,5 @@
 // src/charactersheet/dto/create-character-sheet.dto.ts
-import { IsObject, IsBoolean } from 'class-validator';
+import { IsObject, IsBoolean, IsOptional, IsString, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateCharacterSheetDto {
@@ -7,7 +7,7 @@ export class CreateCharacterSheetDto {
     type: Object,
     example: {
       name: 'New Character',
-      imageUrl: 'https://example.com/default-avatar.png',
+      // imageUrl: 'https://example.com/default-avatar.png', // 이 부분은 data 객체 내부의 예시입니다.
       level: 1,
     },
     description: '캐릭터 시트 데이터 (프론트에서 계산된 모든 값 포함)',
@@ -21,4 +21,15 @@ export class CreateCharacterSheetDto {
   })
   @IsBoolean()
   isPublic: boolean;
+
+  @ApiProperty({
+    example: 'https://s3.example.com/path/to/image.png',
+    description: '캐릭터 시트 초상화 이미지 URL (선택 사항)',
+    nullable: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsUrl({}, { message: 'portraitImageUrl must be a valid URL' })
+  @IsString()
+  portraitImageUrl?: string | null;
 }

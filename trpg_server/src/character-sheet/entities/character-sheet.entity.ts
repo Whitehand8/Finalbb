@@ -42,6 +42,20 @@ export class CharacterSheet {
   @Column({ default: false })
   isPublic: boolean;
 
+  @ApiProperty({
+    example: 'https://s3.example.com/path/to/image.png',
+    description: '캐릭터 시트 초상화 이미지 URL',
+    nullable: true,
+    required: false,
+  })
+  @Column({
+    type: 'varchar',
+    length: 2048, // URL 길이를 고려하여 넉넉하게 설정
+    nullable: true,
+    name: 'portrait_image_url',
+  })
+  portraitImageUrl: string | null;
+
   @OneToOne(() => RoomParticipant, { nullable: true })
   @JoinColumn()
   participant: RoomParticipant | null;

@@ -1,3 +1,4 @@
+// src/charactersheet/dto/character-sheet-response.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 import { CharacterSheet } from '../entities/character-sheet.entity';
@@ -35,11 +36,19 @@ export class CharacterSheetResponseDto {
   isPublic: boolean;
 
   @ApiProperty({
+    example: 'https://s3.example.com/path/to/image.png',
+    description: '캐릭터 시트 초상화 이미지 URL',
+    nullable: true,
+    required: false,
+  })
+  portraitImageUrl: string | null;
+
+  @ApiProperty({
     type: Object,
     example: {
       name: 'Legolas',
       level: 5,
-      // imageUrl:
+      // imageUrl: // 이 예시는 data 객체 내부의 값입니다. portraitImageUrl과 다름에 유의하세요.
       //   'https://d12345.cloudfront.net/uploads/characters/.../avatar.png',
       class: 'Ranger',
       race: 'Elf',
@@ -87,6 +96,7 @@ export class CharacterSheetResponseDto {
       ownerId: participant.user.id,
       trpgType: entity.trpgType,
       isPublic: entity.isPublic,
+      portraitImageUrl: entity.portraitImageUrl, //  <-- 이 필드를 추가했습니다.
       data: entity.data,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
