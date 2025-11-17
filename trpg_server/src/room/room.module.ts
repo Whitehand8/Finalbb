@@ -8,12 +8,14 @@ import { RoomParticipant } from './entities/room-participant.entity';
 import { RoomValidatorService } from './room-validator.service';
 import { RoomParticipantService } from './room-participant.service';
 import { ChatModule } from '@/chat/chat.module';
+import { AiModule } from '@/ai/ai.module'; // 1. AiModule을 import합니다.
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Room, RoomParticipant]),
     forwardRef(() => UsersModule),
     forwardRef(() => ChatModule),
+    AiModule, // 2. AiModule을 imports 배열에 추가합니다.
   ],
   controllers: [RoomController],
   providers: [RoomService, RoomValidatorService, RoomParticipantService],

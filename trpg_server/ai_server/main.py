@@ -402,7 +402,7 @@ def _create_session_from_core(story_core: dict) -> tuple[str, list[dict]]:
         "content": "이야기를 5막 구조로 분할해줘. 각 막의 목표와 주요 사건을 JSON 배열로 간략히 정리해줘. 각 항목은 {\"act\": number, \"description\": string} 형태.",
     }
     try:
-        response = chat([system_msg, user_msg], max_tokens=300)
+        response = chat([system_msg, user_msg], max_tokens=1000)
         content = response.choices[0].message.content or ""
         try:
             outline = json.loads(content)
@@ -578,7 +578,7 @@ def trpg_reply(request: TRPGRequest):
     user_msg = {"role": "user", "content": user_content}
 
     try:
-        response = chat([system_msg, user_msg], temperature=0.8, max_tokens=180)
+        response = chat([system_msg, user_msg], temperature=0.8, max_tokens=600)
         reply = response.choices[0].message.content or ""
         reply = _normalize_reply(reply)
         # 첫 GM 응답 이후에는 도입을 반복하지 않도록 플래그 설정
@@ -643,7 +643,7 @@ def scene(request: SceneRequest):
     }
 
     try:
-        response = chat([system_msg, user_msg], temperature=0.8, max_tokens=320)
+        response = chat([system_msg, user_msg], temperature=0.8, max_tokens=800)
         reply = response.choices[0].message.content or ""
     except Exception as e:
         return {"error": str(e)}

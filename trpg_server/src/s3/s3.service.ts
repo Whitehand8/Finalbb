@@ -50,6 +50,7 @@ export class S3Service {
       Bucket: this.bucketName,
       Key: key,
       ContentType: contentType,
+      CacheControl: 'public, max-age=31536000',
     });
 
     return getSignedUrl(this.s3Client, command, {

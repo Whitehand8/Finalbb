@@ -86,7 +86,7 @@ export class ChatService {
     return ChatRoomResponseDto.fromEntity(roomWithFreshData, participantIds);
   }
 
-  // 2. 메시지 배치 저장
+  // 2. 메시지 배치 저장 (사용자 메시지 전용)
   async createMessages(
     requesterUserId: number, // API를 호출한 사용자 (권한 검사용)
     createMessagesDto: CreateChatMessagesDto,
@@ -107,6 +107,10 @@ export class ChatService {
     //    (요청자가 다른 사람의 메시지를 위조하지 못하도록)
     const validSenderIds = new Set<number>();
     for (const msgDto of createMessagesDto.messages) {
+      // AI 메시지는 senderId가 없으므로 이 로직을 통과할 수 없습니다.
+      if (!msgDto.senderId) {
+        throw new BadRequestException('모든 메시지에는 senderId가 필요합니다.');
+      }
       const messageSenderParticipant =
         await this.chatParticipantRepository.findOne({
           where: {
@@ -130,6 +134,7 @@ export class ChatService {
         chatRoom: { id: createMessagesDto.roomId },
         content: msgDto.content,
         sentAt: new Date(msgDto.sentAt),
+        speaker_name: null, // 사용자 메시지이므로 speaker_name은 null
       }),
     );
 
@@ -162,12 +167,49 @@ export class ChatService {
       where: { chatRoom: { id: roomId } },
       order: { sentAt: 'DESC' }, // 최신 메시지부터
       take: limit,
-      relations: ['sender'], // <-- sender 관계를 명시적으로 로드
+      relations: ['sender'], // <-- sender 관계를 명시적으로 로드 (null일 수 있음)
     });
     // 3. 오래된 순서로 정렬 (클라이언트가 위에서 아래로 읽기 편하도록)
     messages.reverse();
+    // 4. DTO로 변환 (MessageResponseDto.fromEntity가 null sender를 처리함)
     return messages.map((msg) => MessageResponseDto.fromEntity(msg));
   }
+
+  // --- ⬇ AI 메시지 저장을 위한 헬퍼 메소드 추가 ⬇ ---
+
+  /**
+   * AI가 생성한 메시지를 데이터베이스에 저장합니다.
+   * 이 메소드는 ChatGateway에서만 호출되어야 합니다.
+   *
+   * @param chatRoomId - 메시지가 속한 ChatRoom의 ID
+   * @param aiReply - { speaker: string, reply: string } 형식의 AI 응답 객체
+   * @returns 저장된 메시지의 DTO
+   */
+  async createAiMessage(
+    chatRoomId: number,
+    aiReply: { speaker: string; reply: string },
+  ): Promise<MessageResponseDto> {
+    if (!aiReply.reply || !aiReply.speaker) {
+      throw new InternalServerErrorException(
+        'AI 응답이 비어있거나 스피커가 없습니다.',
+      );
+    }
+
+    const newMessage = this.chatMessageRepository.create({
+      sender: null, // AI 메시지는 User sender가 없습니다.
+      speaker_name: aiReply.speaker,
+      content: aiReply.reply,
+      chatRoom: { id: chatRoomId },
+      // sentAt은 @CreateDateColumn에 의해 자동으로 생성됩니다.
+    });
+
+    const savedMessage = await this.chatMessageRepository.save(newMessage);
+
+    // 저장된 메시지 엔티티를 DTO로 변환하여 반환
+    return MessageResponseDto.fromEntity(savedMessage);
+  }
+
+  // --- ⬆ AI 메시지 저장을 위한 헬퍼 메소드 추가 ⬆ ---
 
   // 4. 채팅방 삭제
   @Transactional()

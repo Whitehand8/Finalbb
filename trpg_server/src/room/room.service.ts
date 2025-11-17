@@ -22,6 +22,7 @@ import { ParticipantRole } from '@/common/enums/participant-role.enum';
 import { ROOM_ERRORS, ROOM_MESSAGES } from './constants/room.constants';
 import { RoomParticipantDto } from './dto/room-participant.dto';
 import { ChatService } from '@/chat/chat.service';
+import { AiService } from '@/ai/ai.service'; // 1. AiService 임포트
 
 @Injectable()
 export class RoomService {
@@ -32,12 +33,14 @@ export class RoomService {
     private readonly roomRepository: Repository<Room>,
     private readonly roomValidator: RoomValidatorService,
     private readonly roomParticipantService: RoomParticipantService,
-    
+
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
 
     @Inject(forwardRef(() => ChatService))
     private readonly chatService: ChatService,
+
+    private readonly aiService: AiService, // 2. AiService 주입
   ) {}
 
   // 방 생성
@@ -53,6 +56,25 @@ export class RoomService {
 
     // 검증 단계에서 사용자 정보 활용
     await this.roomValidator.validateRoomCreation(user.id);
+
+    // --- ⬇ AI 방 생성 로직 추가 ⬇ ---
+    let aiSessionId: string | null = null;
+    if (dto.isAiRoom) {
+      this.logger.log(
+        `[CREATE_ROOM] AI 방 생성을 요청합니다. World: ${dto.world}, Theme: ${dto.theme}`,
+      );
+      // ai_server/main.py의 dev route 기본값을 따름 (안전 장치)
+      const storyCore = {
+        world: dto.world || '도시 미스터리',
+        theme: dto.theme || '기이한 실종',
+      };
+
+      // aiService.initStory()는 실패 시 예외를 던지므로 트랜잭션이 롤백됩니다. (정상)
+      const aiSession = await this.aiService.initStory(storyCore);
+      aiSessionId = aiSession.session_id;
+      this.logger.log(`[CREATE_ROOM] AI 세션 생성 성공: ${aiSessionId}`);
+    }
+    // --- ⬆ AI 방 생성 로직 추가 ⬆ ---
 
     const chatRoomName = `${dto.name} (채팅방)`;
     const newChatRoom = await this.chatService.createChatRoom(creatorId, {
@@ -70,13 +92,14 @@ export class RoomService {
       maxParticipants: dto.maxParticipants,
       creator: user,
       chat_room_id: newChatRoom.id,
+      ai_session_id: aiSessionId, // 4. ai_session_id 저장
     });
 
     const savedRoom = await this.roomRepository.save(room);
 
     await this.roomParticipantService.addParticipant(
       savedRoom, // 저장된 TRPG 방 엔티티
-      user,      // 방장 유저 객체
+      user, // 방장 유저 객체
       ParticipantRole.GM, // 방장의 기본 역할 (필요시 GM 등으로 수정)
     );
 
@@ -130,7 +153,11 @@ export class RoomService {
     const user = await this.usersService.getActiveUserById(userId);
     await this.roomParticipantService.addParticipant(room, user);
 
-    await this.chatService.inviteUser(room.creator.id, room.chat_room_id, userId);
+    await this.chatService.inviteUser(
+      room.creator.id,
+      room.chat_room_id,
+      userId,
+    );
 
     // 최신 상태의 방 반환
     const updatedRoom = await this.roomRepository.findOne({
@@ -372,11 +399,12 @@ export class RoomService {
     return this.roomParticipantService.getActiveParticipants(roomId);
   }
 
-  // NPC에서 room조회에 사용
+  // NPC에서 room조회에 사용 ( + AI 로직을 위해 relations에 participants 추가)
   async getRoomById(roomId: string): Promise<Room> {
     const room = await this.roomRepository.findOne({
       where: { id: roomId },
-      relations: { creator: true },
+      // 5. AI 로직(chat.gateway)에서 참가자 역할 조회를 위해 participants.user 추가
+      relations: { creator: true, participants: { user: true } },
     });
     if (!room) {
       throw new NotFoundException(ROOM_ERRORS.NOT_FOUND);

@@ -10,13 +10,14 @@ import { RoomModule } from './room/room.module';
 import { ChatModule } from './chat/chat.module';
 import { CharacterSheetModule } from './character-sheet/character-sheet.module';
 import { NpcModule } from './npc/npc.module';
-import { HttpModule } from '@nestjs/axios';
+// import { HttpModule } from '@nestjs/axios'; // AiModule이 HttpModule을 관리하므로 여기서 제거합니다.
 import { S3Module } from './s3/s3.module';
 import { VttmapModule } from './vttmap/vttmap.module';
 import { TokenModule } from './token/token.module';
 import { VttModule } from './vtt/vtt.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { MapAssetModule } from './map-asset/map-asset.module';
+import { AiModule } from './ai/ai.module'; // 1. AiModule을 import합니다.
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { MapAssetModule } from './map-asset/map-asset.module';
         AWS_SECRET_ACCESS_KEY: Joi.string().optional(),
         S3_BUCKET_NAME: Joi.string().required(),
         CLOUDFRONT_DOMAIN: Joi.string().required(),
+        // AI_SERVER_URL: Joi.string().uri().optional(), // 필요시 .env 검증에 추가
       }),
     }),
     UsersModule,
@@ -55,13 +57,14 @@ import { MapAssetModule } from './map-asset/map-asset.module';
     ChatModule,
     CharacterSheetModule,
     NpcModule,
-    HttpModule,
+    // HttpModule, // 2. 여기서 HttpModule을 제거합니다.
     S3Module,
     VttmapModule,
     TokenModule,
     VttModule,
     EventEmitterModule.forRoot(),
     MapAssetModule,
+    AiModule, // 3. AiModule을 imports 배열에 추가합니다.
   ],
   controllers: [AppController],
   providers: [AppService],

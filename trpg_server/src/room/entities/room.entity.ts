@@ -59,6 +59,15 @@ export class Room {
   @DeleteDateColumn()
   deletedAt: Date | null;
 
+  // --- ⬇ AI 세션 ID 컬럼 추가 ⬇ ---
+  @ApiProperty({
+    description: 'AI 서버 세션 ID (AI 방인 경우에만 사용)',
+    nullable: true,
+  })
+  @Column({ type: 'varchar', name: 'ai_session_id', nullable: true })
+  ai_session_id: string | null;
+  // --- ⬆ AI 세션 ID 컬럼 추가 ⬆ ---
+
   // 방 참여자 목록
   @OneToMany(() => RoomParticipant, (participant) => participant.room)
   participants: RoomParticipant[];
@@ -80,5 +89,4 @@ export class Room {
   @OneToOne(() => ChatRoom, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'chat_room_id' }) // 👈 위 'chat_room_id' 컬럼을 외래 키로 사용합니다.
   chatRoom: ChatRoom;
-  
 }
