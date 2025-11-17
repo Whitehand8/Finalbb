@@ -22,15 +22,11 @@ async function bootstrap() {
   }
 
   const port = configService.get<number>('HTTP_SERVER_POST', 3000);
-  const frontEndOrigin = configService.get<string>(
-    'FRONTEND_ORIGIN',
-    'http://localhost:3000',
-  );
 
-  console.log(`[DEBUG] CORS origin이 다음으로 설정됨: ${frontEndOrigin}`);
+  console.log(`[DEBUG] CORS 설정: 모든 Origin 허용 (credentials: true)`);
 
   app.enableCors({
-  origin: frontEndOrigin, // .env에 설정된 'http://localhost:4000'
+  origin: true, // .env에 설정된 'http://localhost:4000'
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], // 'GET', 'POST', 'PATCH', 'DELETE' 등 모든 메서드 허용
   allowedHeaders: ['Content-Type', 'Authorization', 'Set-Cookie'], // 'Content-Type', 'Authorization' 등 모든 헤더 허용
   credentials: true,
