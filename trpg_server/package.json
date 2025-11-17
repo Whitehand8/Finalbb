@@ -18,9 +18,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "cross-env NODE_ENV=test pnpm build && jest --runInBand --config ./test/jest-e2e.json",
-    "migration:generate": "pnpm build && npx typeorm migration:generate -d dist/db/data-source.js src/db/migrations/PostRefactoring",
-    "migration:run": "pnpm build && npx typeorm-ts-node-commonjs migration:run -d dist/db/data-source.js",
-    "migration:revert": "pnpm build && npx typeorm-ts-node-commonjs migration:revert -d dist/db/data-source.js",
+    "migration:run": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/db/data-source.ts",
+     "migration:generate": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d src/db/data-source.ts",
+     "migration:revert": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/db/data-source.ts",
     "seed:run": "pnpm build && ts-node src/db/run-seeder.ts"
   },
   "dependencies": {
