@@ -2,7 +2,7 @@
 /dist
 /node_modules
 /build
-
+ai_server/venv/
 # Logs
 logs
 *.log
