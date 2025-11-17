@@ -14,7 +14,7 @@ import {
   HttpStatus,
   Query,
   Delete,
-  InternalServerErrorException, // [신규] 500 오류를 명시적으로 처리하기 위해 import
+  InternalServerErrorException,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -44,11 +44,14 @@ import { DeleteVttMapResponseDto } from './dto/delete-vttmap-response.dto';
 @ApiTags('VttMaps')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-@Controller('vttmaps')
+@Controller('vttmaps') // 기본 경로: /vttmaps
 export class VttMapController {
   constructor(private readonly vttMapService: VttMapService) {}
 
-  @Post('rooms/:roomId/vttmaps')
+  // [수정됨] 중복된 'vttmaps' 제거
+  // 변경 전: POST /vttmaps/rooms/:roomId/vttmaps
+  // 변경 후: POST /vttmaps/rooms/:roomId
+  @Post('rooms/:roomId')
   @ApiOperation({
     summary: 'VTT 맵 생성',
     description:
@@ -82,7 +85,10 @@ export class VttMapController {
     return VttMapResponseDto.fromEntity(result.message, result.vttMap);
   }
 
-  @Post('rooms/:roomId/vttmaps/presigned-url')
+  // [수정됨] 중복된 'vttmaps' 제거 및 경로 단축
+  // 변경 전: POST /vttmaps/rooms/:roomId/vttmaps/presigned-url
+  // 변경 후: POST /vttmaps/rooms/:roomId/presigned-url
+  @Post('rooms/:roomId/presigned-url')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'VTT 맵 이미지 업로드용 Presigned URL 발급',
@@ -94,7 +100,7 @@ export class VttMapController {
   })
   @ApiParam({ name: 'roomId', type: 'string', format: 'uuid' })
   @ApiBody({ type: CreatePresignedUrlDto })
-  @ApiCreatedResponse({ type: PresignedUrlResponseDto }) // ✅ 일관성 유지
+  @ApiCreatedResponse({ type: PresignedUrlResponseDto })
   @ApiBadRequestResponse({ description: '잘못된 이미지 형식' })
   @ApiUnauthorizedResponse({ description: '인증되지 않음' })
   @ApiForbiddenResponse({ description: VTTMAP_ERRORS.NOT_ROOM_CREATOR })
@@ -138,8 +144,6 @@ export class VttMapController {
     return VttMapResponseDto.fromEntity(VTTMAP_MESSAGES.RETRIEVED, vttMap);
   }
 
-  // --- 🚨 [수정됨] ---
-  // 500 오류 방지를 위해 try-catch 블록 추가
   @Get()
   @ApiOperation({
     summary: '방 내 VTT 맵 목록 조회',
@@ -162,21 +166,14 @@ export class VttMapController {
         roomId,
         req.user.id,
       );
-      // vttMapService가 맵이 없을 때 빈 배열을 반환하면,
-      // map(VttMapDto.fromEntity)도 빈 배열을 반환합니다.
       return vttMaps.map(VttMapDto.fromEntity);
     } catch (error) {
-      // vttMapService.getVttMapsByRoomId에서 403, 404 오류가 아닌
-      // 예기치 못한 오류(DB 오류 등)가 발생했을 때 500 오류를 반환합니다.
       console.error(`[ERROR] getVttMapsByRoom: ${error.message}`);
-      // 403, 404 오류는 vttMapService 내부의 Guard 로직에서
-      // 자동으로 처리되어야 합니다.
       throw new InternalServerErrorException(
         '맵 목록을 가져오는 중 오류가 발생했습니다.',
       );
     }
   }
-  // --- 🚨 [수정 끝] ---
 
   @Patch(':mapId')
   @ApiOperation({
@@ -224,6 +221,6 @@ export class VttMapController {
     @Req() req: RequestWithUser,
   ) {
     await this.vttMapService.deleteVttMap(mapId, req.user.id);
-    return new DeleteVttMapResponseDto(); // ✅ 명확한 반환
+    return new DeleteVttMapResponseDto();
   }
 }
